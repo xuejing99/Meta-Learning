@@ -1,0 +1,14 @@
+dataset: mini-imagenet
+
+TrainDataset:
+  image_anno_dir: train_phase_train.pickle
+  dataset_dir: datasets\mini-imagenet
+
+EvalDataset:
+  image_anno_dir: train_phase_val.pickle
+  dataset_dir: datasets\mini-imagenet
+
+TestDataset:
+  image_anno_dir: train_phase_test.pickle
+  dataset_dir: datasets\mini-imagenet
+
