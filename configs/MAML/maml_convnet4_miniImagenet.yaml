@@ -3,10 +3,19 @@ dataset: mini-imagenet
 TrainDataset:
   image_anno_dir: train_phase_train.pickle
   dataset_dir: datasets\mini-imagenet
+  preprocess:
+    normalize:
+      mean: [0.471, 0.450, 0.403]
+      std: [0.278, 0.268, 0.284]
 
 EvalDataset:
   image_anno_dir: train_phase_val.pickle
   dataset_dir: datasets\mini-imagenet
+  preprocess:
+    resize: 84
+    normalize:
+      mean: [0.471, 0.450, 0.403]
+      std: [0.278, 0.268, 0.284]
 
 TestDataset:
   image_anno_dir: train_phase_test.pickle
