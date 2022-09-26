@@ -58,3 +58,4 @@ class Registers:
     postprocess = Register('postprocess')
     serving = Register('serving')
     dataset = Register('dataset')
+    transform = Register('transform')

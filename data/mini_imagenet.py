@@ -2,9 +2,11 @@ import os
 import pickle
 import numpy as np
 from PIL import Image
+import torch
 from torch.utils.data import Dataset
 
 from core.workspace import Registers
+from data.data_helper import get_transform
 
 
 @Registers.dataset.register
@@ -16,13 +18,11 @@ class MiniImageNet(Dataset):
         val_file_path (str): file path for val data.
         test_file_path (str): file path for test data.
         mode (str): "train" or "test".
-        image_size (int): image size.
         preprocess(object): the preprocess operation of images.
     """
     def __init__(self, root_path, train_file_path=None,
                  val_file_path=None, test_file_path=None,
-                 mode='train', image_size=84,
-                 preprocess=None):
+                 mode='train', preprocess=None):
         super(MiniImageNet, self).__init__()
         if mode == "train":
             dataset_file = os.path.join(root_path, train_file_path)
@@ -40,13 +40,12 @@ class MiniImageNet(Dataset):
         labels = np.array(labels)
         label_key = sorted(np.unique(labels))
         label_map = dict(zip(label_key, range(len(label_key))))
-        new_label = np.array([label_map[x] for x in label])
+        new_label = np.array([label_map[x] for x in labels])
 
-        self.image_size = image_size
         self.images = images
         self.labels = new_label
         self.n_classes = len(label_key)
-        self.transform = get_transform(preprocess, self.image_size)
+        self.transform = get_transform(preprocess)
 
     def __len__(self):
         return len(self.images)
@@ -59,23 +58,36 @@ class MiniImageNet(Dataset):
 
 @Registers.dataset.register
 class MetaMiniImageNet(MiniImageNet):
-    def __init__(self, root_path, split='train', image_size=84,
-                 normalization=True, transform=None, val_transform=None,
-                 n_batch=200, n_episode=4, n_way=5, n_shot=1, n_query=15):
-        super(MetaMiniImageNet, self).__init__(root_path, split, image_size,
-                                               normalization, transform)
+    """
+    Args:
+        root_path (str): root directory for dataset.
+        train_file_path (str): file path for train data.
+        val_file_path (str): file path for val data.
+        test_file_path (str): file path for test data.
+        mode (str): "train" or "test".
+        preprocess(object): the preprocess operation of images.
+        n_batch (int): batch size
+        n_episode (int): episode number to train meta-model
+        n_way (int): the number of classes to train a meta-model
+        n_shot (int): the number of examples of each class to train a meta-model
+        n_query (int): the number of samples to test the trained meta-model
+    """
+    def __init__(self, root_path, train_file_path=None,
+                 val_file_path=None, test_file_path=None,
+                 mode='train', preprocess=None, n_batch=200,
+                 n_episode=4, n_way=5, n_shot=1, n_query=15):
+        super(MetaMiniImageNet, self).__init__(root_path, train_file_path,
+                                               val_file_path, test_file_path,
+                                               mode, preprocess)
         self.n_batch = n_batch
         self.n_episode = n_episode
         self.n_way = n_way
         self.n_shot = n_shot
         self.n_query = n_query
 
-        self.catlocs = tuple()
+        self.categories = tuple()
         for cat in range(self.n_classes):
-            self.catlocs += (np.argwhere(self.label == cat).reshape(-1),)
-
-        self.val_transform = get_transform(
-            val_transform, image_size, self.norm_params)
+            self.categories += (np.argwhere(self.labels == cat).reshape(-1),)
 
     def __len__(self):
         return self.n_batch * self.n_episode
@@ -86,12 +98,12 @@ class MetaMiniImageNet(MiniImageNet):
         for c in cats:
             c_shot, c_query = [], []
             idx_list = np.random.choice(
-                self.catlocs[c], self.n_shot + self.n_query, replace=False)
+                self.categories[c], self.n_shot + self.n_query, replace=False)
             shot_idx, query_idx = idx_list[:self.n_shot], idx_list[-self.n_query:]
             for idx in shot_idx:
-                c_shot.append(self.transform(self.data[idx]))
+                c_shot.append(self.transform(self.images[idx]))
             for idx in query_idx:
-                c_query.append(self.val_transform(self.data[idx]))
+                c_query.append(self.transform(self.images[idx]))
             shot.append(torch.stack(c_shot))
             query.append(torch.stack(c_query))
 
@@ -102,5 +114,20 @@ class MetaMiniImageNet(MiniImageNet):
         query_labels = cls.repeat(1, self.n_query).flatten()  # [n_way * n_query]
 
         return shot, query, shot_labels, query_labels
+
+    def collate_fn(self, batch):
+        shot, query, shot_label, query_label = [], [], [], []
+        for s, q, sl, ql in batch:
+            shot.append(s)
+            query.append(q)
+            shot_label.append(sl)
+            query_label.append(ql)
+
+        shot = torch.stack(shot)  # [n_ep, n_way * n_shot, C, H, W]
+        query = torch.stack(query)  # [n_ep, n_way * n_query, C, H, W]
+        shot_label = torch.stack(shot_label)  # [n_ep, n_way * n_shot]
+        query_label = torch.stack(query_label)  # [n_ep, n_way * n_query]
+
+        return shot, query, shot_label, query_label
 
 

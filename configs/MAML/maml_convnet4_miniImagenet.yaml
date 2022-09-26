@@ -4,9 +4,12 @@ TrainDataset:
   image_anno_dir: train_phase_train.pickle
   dataset_dir: datasets\mini-imagenet
   preprocess:
+    resize: 84
+    toTensor: null
     normalize:
       mean: [0.471, 0.450, 0.403]
       std: [0.278, 0.268, 0.284]
+
 
 EvalDataset:
   image_anno_dir: train_phase_val.pickle
@@ -17,7 +20,15 @@ EvalDataset:
       mean: [0.471, 0.450, 0.403]
       std: [0.278, 0.268, 0.284]
 
+
 TestDataset:
   image_anno_dir: train_phase_test.pickle
   dataset_dir: datasets\mini-imagenet
 
+
+TrainConfig:
+  batch_size: 200
+  episode: 4
+  n_way: 5
+  k_shot: 1
+  query_number: 15

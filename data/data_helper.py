@@ -1,9 +1,10 @@
 import torchvision.transforms as transforms
 
+from core.workspace import Registers
 
-def get_transform(operations, img_size):
-    op_list = [transforms.Resize(img_size)]
-    # for op in op_list:
-    #     if op == ""
-    op_list.append(transforms.ToTensor())
-    op_list.append(transforms.Normalize(operations))
+
+def get_transform(operations):
+    op_list = list()
+    for op in operations.keys():
+        op_list.append(Registers.transform[op](operations[op]))
+    return transforms.Compose(op_list)
