@@ -20,16 +20,10 @@ class MiniImageNet(Dataset):
         mode (str): "train" or "test".
         preprocess(object): the preprocess operation of images.
     """
-    def __init__(self, root_path, train_file_path=None,
-                 val_file_path=None, test_file_path=None,
+    def __init__(self, root_path, file_path=None,
                  mode='train', preprocess=None):
         super(MiniImageNet, self).__init__()
-        if mode == "train":
-            dataset_file = os.path.join(root_path, train_file_path)
-        elif mode == "val":
-            dataset_file = os.path.join(root_path, val_file_path)
-        elif mode == "test":
-            dataset_file = os.path.join(root_path, test_file_path)
+        dataset_file = os.path.join(root_path, file_path)
         assert os.path.isfile(dataset_file)
 
         with open(dataset_file, 'rb') as f:
@@ -72,12 +66,10 @@ class MetaMiniImageNet(MiniImageNet):
         n_shot (int): the number of examples of each class to train a meta-model
         n_query (int): the number of samples to test the trained meta-model
     """
-    def __init__(self, root_path, train_file_path=None,
-                 val_file_path=None, test_file_path=None,
+    def __init__(self, root_path, file_path=None,
                  mode='train', preprocess=None, n_batch=200,
                  n_episode=4, n_way=5, n_shot=1, n_query=15):
-        super(MetaMiniImageNet, self).__init__(root_path, train_file_path,
-                                               val_file_path, test_file_path,
+        super(MetaMiniImageNet, self).__init__(root_path, file_path,
                                                mode, preprocess)
         self.n_batch = n_batch
         self.n_episode = n_episode

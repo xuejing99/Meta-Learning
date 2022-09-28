@@ -59,3 +59,5 @@ class Registers:
     serving = Register('serving')
     dataset = Register('dataset')
     transform = Register('transform')
+    module = Register('module')
+    optimizer = Register('optimizer')
