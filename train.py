@@ -78,7 +78,7 @@ def main(config):
     aves_keys = ['train-loss', 'train-acc', 'val-loss', 'val-acc']
     
     # construct the model
-    model = load_model(config['Model'])
+    model = load_model(config['Model']).to(device)
     logger.info('num params: {}'.format(Registers.metric['params'](model)))
 
     # load datasets
