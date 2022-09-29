@@ -26,6 +26,8 @@ def initial_setting(config):
     yaml.dump(config, open(os.path.join(ckpt_path, 'config.yaml'), 'w'))
     handler = logging.FileHandler(os.path.join(ckpt_path, "log.txt"), encoding='UTF-8')
     handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s  %(message)s')
+    handler.setFormatter(formatter)
     logger.addHandler(handler)
 
     return writer, ckpt_path
@@ -71,6 +73,17 @@ def train_step(model, x_shot, x_query, y_shot, y_query, config, optimizer):
     return loss, acc
 
 
+def eval_model(model, x_shot, x_query, y_shot, y_query, config):
+    logits = model(x_shot, x_query, y_shot, config['TrainConfig']['inner_args'], meta_train=False)
+    logits = logits.flatten(0, 1)
+    labels = y_query.flatten()
+
+    pred = torch.argmax(logits, dim=-1)
+    acc = utils.metrics.compute_acc(pred, labels)
+    loss = F.cross_entropy(logits, labels)
+    return loss, acc
+
+
 def main(config):
     # initial setting
     writer, ckpt_path = initial_setting(config['TrainConfig'])
@@ -85,7 +98,7 @@ def main(config):
     train_loader = load_dataset(config['dataset'], config['TrainDataset'],
                                 "train", **config['TrainConfig']['outer_args'])
     val_loader = load_dataset(config['dataset'], config['EvalDataset'],
-                              "train", **config['TrainConfig']['outer_args'])
+                              "val", **config['TrainConfig']['outer_args'])
 
     # 4. train the model
     start_epoch = 1
@@ -105,15 +118,27 @@ def main(config):
             aves['train-loss'].update(loss.item(), 1)
             aves['train-acc'].update(acc, 1)
 
+        model.eval()
+        for data in tqdm(val_loader, desc='meta-val', leave=False):
+            x_shot, x_query, y_shot, y_query = data
+            x_shot, y_shot = x_shot.to(device), y_shot.to(device)
+            x_query, y_query = x_query.to(device), y_query.to(device)
+            loss, acc = eval_model(model, x_shot, x_query, y_shot, y_query, config)
+            aves['val-loss'].update(loss.item(), 1)
+            aves['val-acc'].update(acc, 1)
+
         for k, avg in aves.items():
             aves[k] = avg.item()
-        logger.info('epoch {}, meta-train {:.4f}|{:.4f}'.format(str(epoch), aves['train-loss'], aves['train-acc']))
+            
+        logger.info('epoch {}, meta-train {:.4f}|{:.4f}  |  meta-val {:.4f}|{:.4f}'
+                    .format(str(epoch), aves['train-loss'], aves['train-acc'],
+                            aves['val-loss'], aves['val-acc']))
         writer.add_scalars('loss', {'meta-train': aves['train-loss']}, epoch)
         writer.add_scalars('acc', {'meta-train': aves['train-acc']}, epoch)
+        writer.add_scalars('loss', {'meta-val': aves['val-loss']}, epoch)
+        writer.add_scalars('acc', {'meta-val': aves['val-acc']}, epoch)
 
         torch.save(model, os.path.join(ckpt_path, 'epoch-last.pth'))
-
-
 
 
 def parse_opt():
@@ -129,7 +154,6 @@ if __name__ == '__main__':
     configs = yaml.load(open(opt.config, 'r'), Loader=yaml.FullLoader)
 
     logging.basicConfig(level=logging.INFO, format='%(asctime)s  %(message)s')
-
     logger = logging.getLogger(__name__)
 
     main(configs)

@@ -1,1 +1,1 @@
-from . import maml
+from . import MAML
