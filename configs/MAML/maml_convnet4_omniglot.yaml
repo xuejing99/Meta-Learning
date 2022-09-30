@@ -1,0 +1,66 @@
+dataset: MetaOmniglot
+device: cpu
+
+TrainDataset:
+  image_anno_dir: omniglot_resized
+  dataset_dir: datasets\Omniglot
+  preprocess:
+    resize: 80
+    toTensor: null
+    normalize:
+      mean: [0.471, 0.450, 0.403]
+      std: [0.278, 0.268, 0.284]
+
+EvalDataset:
+  image_anno_dir: omniglot_resized
+  dataset_dir: datasets\Omniglot
+  preprocess:
+    resize: 80
+    toTensor: null
+    normalize:
+      mean: [0.471, 0.450, 0.403]
+      std: [0.278, 0.268, 0.284]
+
+TestDataset:
+  image_anno_dir: train_phase_test.pickle
+  dataset_dir: datasets\mini-imagenet
+
+TrainConfig:
+  outer_args:
+    batch_size: 200
+    episode: 4
+    n_way: &n_way 5
+    k_shot: 1
+    query_number: 15
+  reuse: False
+  epoch: 300
+  project_name: convnet4_mini-imagenet_5_way_1_shot
+  optimizer:
+    method: Adam
+    args:
+      lr: 0.001
+  inner_args:
+    n_step: 5
+    encoder_lr: 0.01
+    classifier_lr: 0.01
+    first_order: False  # set to True for FOMAML
+    frozen:
+      - bn
+    reset_classifier: False
+    momentum: 0.
+    weight_decay: 0.
+
+Model:
+  name: MAML
+  encoder: small_convnet4
+  classifier: LogisticClassifier
+  encoder_config:
+    bn:
+      track_running_stats: False
+  classifier_config:
+    n_way: *n_way
+
+
+
+
+

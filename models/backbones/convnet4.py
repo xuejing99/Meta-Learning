@@ -61,5 +61,5 @@ def convnet4(encoder_args=dict()):
 
 
 @Registers.module.register
-def wide_convnet4(bn_args=dict()):
-  return ConvNet4(64, 64, bn_args)
+def wide_convnet4(encoder_args=dict()):
+  return ConvNet4(64, 64, encoder_args.get("bn", dict()))

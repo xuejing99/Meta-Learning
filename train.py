@@ -46,9 +46,9 @@ def load_dataset(dataset_name, config, mode, batch_size,
     dataset = Registers.dataset[dataset_name](
         root_path=config['dataset_dir'],
         file_path=config['image_anno_dir'],
-        mode=mode, preprocess=config['preprocess'],
-        n_batch=batch_size, n_episode=episode,
-        n_way=n_way, n_shot=k_shot, n_query=query_number)
+        mode=mode, preprocess=config['preprocess'])
+        # n_batch=batch_size, n_episode=episode,
+        # n_way=n_way, n_shot=k_shot, n_query=query_number)
     loader = DataLoader(dataset, episode,
                         collate_fn=dataset.collate_fn,
                         num_workers=0, pin_memory=True)
@@ -144,7 +144,7 @@ def main(config):
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', help='configuration file',
-                        default="./configs/MAML/maml_convnet4_miniImagenet.yaml")
+                        default="./configs/MAML/maml_convnet4_omniglot.yaml")
     args = parser.parse_args()
     return args
 
